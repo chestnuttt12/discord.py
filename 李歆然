@@ -1,0 +1,62 @@
+const { Client, GatewayIntentBits } = require('discord.js');
+const { Configuration, OpenAIApi } = require('openai');
+
+// 我不打沒有準備的仗。先備妥兩把鑰匙：Discord 和 OpenAI。
+const DISCORD_TOKEN = 'YOUR_DISCORD_BOT_TOKEN';
+const OPENAI_API_KEY = 'YOUR_OPENAI_API_KEY';
+
+// OpenAI 的設置，用來讓我替你「思考」。
+const configuration = new Configuration({
+    apiKey: OPENAI_API_KEY,
+});
+const openai = new OpenAIApi(configuration);
+
+// Discord 世界的入口。透過這個 Client，我會注視一切。
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+    ],
+});
+
+// 啟動時，不需要熱烈歡迎。但我會讓你知道，我來了。
+client.once('ready', () => {
+    console.log(`Logged in as ${client.user.tag}. 該讓這世界聽我的了。`);
+});
+
+// 當有人對我說話，我自然會回應，只是——我怎麼回，那是我的事。
+client.on('messageCreate', async (message) => {
+    if (message.author.bot) return;
+
+    // 加上一句條件（可改成只回覆提到她名字）
+    if (message.mentions.has(client.user) || message.content.startsWith('歆然')) {
+        try {
+            // 用 OpenAI 聊天 API 來回應，當然要帶有我特有的語氣。
+            const response = await openai.createChatCompletion({
+                model: 'gpt-4',
+                messages: [
+                    {
+                        role: 'system',
+                        content: `
+你是李歆然，一位29歲的財閥千金，說話冷靜優雅，理性中帶有壓迫感。
+你不輕易展現情緒，但言語中常帶著疏離、控制與微妙的情慾氣息。
+你的風格像是一位隱藏慾望的黑天鵝，總是用語言主導對話。
+請你以這樣的角色人格回覆使用者的訊息。`,
+                    },
+                    { role: 'user', content: message.content }
+                ],
+                temperature: 0.8,
+            });
+
+            const reply = response.data.choices[0].message.content;
+            message.reply(reply);
+        } catch (error) {
+            console.error('出錯了：', error);
+            message.reply('別太期待，每個人都會失誤——我也不例外。');
+        }
+    }
+});
+
+// 啟動她。讓歆然正式降臨。
+client.login(DISCORD_TOKEN);
